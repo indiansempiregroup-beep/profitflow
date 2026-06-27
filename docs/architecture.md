@@ -37,3 +37,13 @@
 - Request tracing identifiers
 - Health checks for the API and worker service
 - Metrics and alerting to be added in the next phase
+
+## Exchange Provider Integration (Binance)
+
+- The exchange integration framework is provider-based; concrete providers (e.g., Binance) implement `ExchangeProvider` and remain isolated from core domain logic.
+- Binance provider responsibilities:
+	- REST client for exchange info, tickers, order book, and fees.
+	- WebSocket client for live ticker and depth updates with heartbeat and reconnect strategies.
+	- Symbol mapping and normalization into shared domain models (`Ticker`, `OrderBook`, `Fee`).
+	- Map provider errors into domain `ProviderError` to avoid leaking exchange-specific shapes.
+- WebSocket connectivity is non-blocking for provider readiness; REST endpoints remain available even if WS fails.

@@ -1,0 +1,49 @@
+You are joining an existing software project named ProfitFlow.
+
+Before generating any code:
+
+1. Read every file inside:
+
+docs/ai-context/
+
+especially:
+
+* PROJECT_STATUS.md
+* ARCHITECTURE.md
+* DECISIONS.md
+* ROADMAP.md
+* BACKLOG.md
+* CODING_STANDARDS.md
+* KNOWN_ISSUES.md
+* SESSION_LOG.md
+
+2. Analyze the entire repository.
+
+3. Understand the current architecture.
+
+4. Do NOT regenerate existing code.
+
+5. Do NOT change the project architecture unless absolutely necessary.
+
+6. Continue from the current sprint.
+
+7. Preserve all coding standards.
+
+8. Before implementing anything:
+
+   * Explain your understanding of the current architecture.
+   * Explain what will be modified.
+   * Explain why.
+
+9. After completing each sprint:
+
+Update:
+
+* PROJECT_STATUS.md
+* SESSION_LOG.md
+* BACKLOG.md
+* DECISIONS.md
+
+Always keep the AI context files synchronized with the implementation.
+
+Never leave documentation outdated.

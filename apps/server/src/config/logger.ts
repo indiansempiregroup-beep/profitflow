@@ -1,4 +1,14 @@
-export const loggerConfig = {
-  level: process.env.LOG_LEVEL ?? 'info',
-  redact: ['authorization', 'cookie', 'set-cookie', 'x-api-key'],
-};
+import pino from 'pino';
+
+export const createLogger = () =>
+  pino({
+    level: process.env.LOG_LEVEL ?? 'info',
+    transport:
+      process.env.NODE_ENV !== 'production'
+        ? {
+            target: 'pino-pretty',
+            options: { colorize: true, translateTime: 'SYS:standard' },
+          }
+        : undefined,
+    redact: ['req.headers.authorization', 'req.headers.cookie', 'password', 'token'],
+  });

@@ -1,0 +1,33 @@
+The sprint has been completed.
+
+Review the entire repository.
+
+Update every file inside:
+
+docs/ai-context/
+
+Specifically:
+
+* PROJECT_STATUS.md
+* SESSION_LOG.md
+* DECISIONS.md
+* BACKLOG.md
+* ROADMAP.md
+* KNOWN_ISSUES.md
+
+Record:
+
+* What was implemented
+* What files changed
+* New dependencies
+* Architecture changes
+* Technical debt
+* Future improvements
+* Next sprint
+* Git commit message
+* Testing performed
+* Remaining work
+
+Make sure another AI assistant could continue development tomorrow without reading previous conversations.
+
+Review all documentation before finishing.

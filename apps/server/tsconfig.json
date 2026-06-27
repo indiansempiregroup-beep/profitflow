@@ -4,7 +4,23 @@
     "module": "NodeNext",
     "moduleResolution": "NodeNext",
     "outDir": "dist",
-    "rootDir": "src"
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"],
+      "@api/*": ["src/api/*"],
+      "@config/*": ["src/config/*"],
+      "@core/*": ["src/core/*"],
+      "@database/*": ["src/database/*"],
+      "@exchanges/*": ["src/exchanges/*"],
+      "@scanner/*": ["src/scanner/*"],
+      "@arbitrage/*": ["src/arbitrage/*"],
+      "@websocket/*": ["src/websocket/*"],
+      "@notifications/*": ["src/notifications/*"],
+      "@jobs/*": ["src/jobs/*"],
+      "@utils/*": ["src/utils/*"]
+    },
+    "types": ["node"]
   },
   "include": ["src/**/*.ts"]
 }

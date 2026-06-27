@@ -1,0 +1,53 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("users")
+}
+
+model ExchangeConnection {
+  id           String   @id @default(cuid())
+  userId       String
+  exchangeName String
+  credentials  Json
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  @@map("exchange_connections")
+}
+
+model MarketSnapshot {
+  id            String   @id @default(cuid())
+  exchangeName  String
+  symbol        String
+  bid           Decimal
+  ask           Decimal
+  lastUpdatedAt DateTime
+  createdAt     DateTime @default(now())
+
+  @@map("market_snapshots")
+}
+
+model ArbitrageOpportunity {
+  id               String   @id @default(cuid())
+  symbol           String
+  buyExchange      String
+  sellExchange     String
+  spread           Decimal
+  estimatedProfit  Decimal
+  detectedAt       DateTime @default(now())
+  createdAt        DateTime @default(now())
+
+  @@map("arbitrage_opportunities")
+}
