@@ -8,6 +8,8 @@
   ],
   "scripts": {
     "dev": "turbo run dev --parallel",
+    "dev:server": "DOTENV_CONFIG_PATH=../../.env corepack pnpm --dir apps/server exec tsx watch -r tsconfig-paths/register src/index.ts",
+    "dev:mobile": "corepack pnpm --dir apps/mobile exec expo start",
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
