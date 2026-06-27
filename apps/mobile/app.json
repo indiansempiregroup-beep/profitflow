@@ -1,0 +1,11 @@
+{
+  "expo": {
+    "name": "ProfitFlow",
+    "slug": "profitflow",
+    "scheme": "profitflow",
+    "plugins": ["expo-router"],
+    "experiments": {
+      "typedRoutes": true
+    }
+  }
+}
