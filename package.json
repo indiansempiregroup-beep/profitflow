@@ -11,8 +11,13 @@
     "build": "turbo run build",
     "lint": "turbo run lint",
     "test": "turbo run test",
+    "typecheck": "turbo run build",
     "format": "prettier --write .",
     "prepare": "husky install"
+  },
+  "engines": {
+    "node": ">=22",
+    "pnpm": ">=9"
   },
   "devDependencies": {
     "@commitlint/cli": "^19.5.0",
