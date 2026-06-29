@@ -1,11 +1,11 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useRouter, useSegments } from 'expo-router';
+import { type Href, useRouter, useSegments } from 'expo-router';
 import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { theme } from '../../lib/theme';
 
 interface TabItem {
-  route: string;
+  route: Href;
   label: string;
   iconName: React.ComponentProps<typeof MaterialCommunityIcons>['name'];
 }
@@ -32,7 +32,7 @@ export function NavigationShell({ children }: { children: React.ReactNode }) {
 
           return (
             <Pressable
-              key={tab.route}
+              key={String(tab.route)}
               onPress={() => router.replace(tab.route)}
               style={styles.tabButton}
               accessibilityRole="button"
@@ -43,7 +43,12 @@ export function NavigationShell({ children }: { children: React.ReactNode }) {
                 size={24}
                 color={isActive ? theme.colors.primary : theme.colors.textSecondary}
               />
-              <Text style={[styles.tabLabel, { color: isActive ? theme.colors.primary : theme.colors.textSecondary }]}>
+              <Text
+                style={[
+                  styles.tabLabel,
+                  { color: isActive ? theme.colors.primary : theme.colors.textSecondary },
+                ]}
+              >
                 {tab.label}
               </Text>
             </Pressable>

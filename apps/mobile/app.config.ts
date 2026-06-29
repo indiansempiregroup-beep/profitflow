@@ -1,11 +1,13 @@
-import 'dotenv/config';
+import { config } from 'dotenv';
+
+config({ path: '../../.env' });
 
 export default {
   expo: {
     name: 'ProfitFlow',
     slug: 'profitflow',
     scheme: 'profitflow',
-    plugins: ['expo-router'],
+    plugins: ['expo-router', 'expo-notifications'],
     experiments: {
       typedRoutes: true,
     },

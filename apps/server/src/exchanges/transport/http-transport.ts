@@ -1,7 +1,7 @@
 import http from 'node:http';
 import https from 'node:https';
 import { URL } from 'node:url';
-import type { RestClientTransport, RestRequestOptions, RestResponse } from './rest-client.js';
+import type { RestClientTransport, RestRequestOptions, RestResponse } from './rest-client';
 
 export class HttpTransport implements RestClientTransport {
   async request<T>(options: RestRequestOptions): Promise<RestResponse<T>> {

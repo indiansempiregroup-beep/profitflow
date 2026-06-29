@@ -4,6 +4,7 @@ import { ProviderHealthMonitor } from '@/exchanges/market-data/health-monitor.js
 import { StaleDataDetector } from '@/exchanges/market-data/stale-detector.js';
 import { ScannerEngine } from '@/scanner/scanner-engine.js';
 import { OpportunityEvaluationService } from './opportunity-evaluation-service.js';
+import type { ValidatedOpportunity } from '@profitflow/shared';
 import {
   SimpleConfidenceScorer,
   SimpleFeeAnalyzer,
@@ -69,5 +70,9 @@ export class OpportunityEngine {
 
   getHealthMonitor(): ProviderHealthMonitor {
     return this.healthMonitor;
+  }
+
+  getValidatedOpportunities(): ValidatedOpportunity[] {
+    return this.evaluationService.getValidatedOpportunities();
   }
 }

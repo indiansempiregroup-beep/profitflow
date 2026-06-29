@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import pino from 'pino';
-import { BinanceProvider } from '../provider.js';
-import type { RestClientTransport } from '../../transport/rest-client.js';
+import { BinanceProvider } from '../provider';
+import type { RestClientTransport } from '@exchanges/transport/rest-client';
 
 class MockTransport implements RestClientTransport {
   request = vi.fn();

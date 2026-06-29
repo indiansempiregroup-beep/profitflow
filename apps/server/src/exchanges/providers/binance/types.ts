@@ -1,5 +1,6 @@
 export interface BinanceSymbol {
   symbol: string;
+  status: string;
   baseAsset: string;
   quoteAsset: string;
   baseAssetPrecision: number;

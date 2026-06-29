@@ -48,15 +48,19 @@ export class MarketDataAggregator {
 
     const symbols = this.registeredSymbols.get(provider.name.toLowerCase()) ?? [];
     for (const symbol of symbols) {
-      const canonicalSymbol = this.normalizeCanonicalSymbol(symbol);
-      const ticker = await this.fetchTicker(provider as AggregatorProviderLike, symbol);
-      if (ticker) {
-        this.ingestTicker(provider.name, symbol, canonicalSymbol, ticker, timestamp);
-      }
+      try {
+        const canonicalSymbol = this.normalizeCanonicalSymbol(symbol);
+        const ticker = await this.fetchTicker(provider as AggregatorProviderLike, symbol);
+        if (ticker) {
+          this.ingestTicker(provider.name, symbol, canonicalSymbol, ticker, timestamp);
+        }
 
-      const orderBook = await this.fetchOrderBook(provider as AggregatorProviderLike, symbol);
-      if (orderBook) {
-        this.ingestOrderBook(provider.name, symbol, canonicalSymbol, orderBook, timestamp);
+        const orderBook = await this.fetchOrderBook(provider as AggregatorProviderLike, symbol);
+        if (orderBook) {
+          this.ingestOrderBook(provider.name, symbol, canonicalSymbol, orderBook, timestamp);
+        }
+      } catch {
+        this.options.healthMonitor.recordFailure(provider.name, this.now().toISOString());
       }
     }
   }
@@ -79,7 +83,11 @@ export class MarketDataAggregator {
     this.ingestTicker(providerName, symbol, canonicalSymbol, ticker, timestamp);
   }
 
-  async handleOrderBookUpdate(providerName: string, symbol: string, orderBook: OrderBook): Promise<void> {
+  async handleOrderBookUpdate(
+    providerName: string,
+    symbol: string,
+    orderBook: OrderBook,
+  ): Promise<void> {
     const canonicalSymbol = this.normalizeCanonicalSymbol(symbol);
     const timestamp = this.now().toISOString();
     this.ingestOrderBook(providerName, symbol, canonicalSymbol, orderBook, timestamp);
@@ -102,13 +110,26 @@ export class MarketDataAggregator {
         if (this.options.staleDetector.isStale(state.lastUpdateAt, now)) {
           state.healthStatus = 'stale';
           this.options.healthMonitor.recordFailure(provider.name, now.toISOString());
-          this.publish('provider.stale', provider.name, symbol, canonicalSymbol, now.toISOString(), { stale: true });
+          this.publish(
+            'provider.stale',
+            provider.name,
+            symbol,
+            canonicalSymbol,
+            now.toISOString(),
+            { stale: true },
+          );
         }
       }
     }
   }
 
-  private ingestTicker(providerName: string, symbol: string, canonicalSymbol: string, ticker: Ticker, timestamp: string): void {
+  private ingestTicker(
+    providerName: string,
+    symbol: string,
+    canonicalSymbol: string,
+    ticker: Ticker,
+    timestamp: string,
+  ): void {
     const state = this.ensureState(providerName, symbol, canonicalSymbol);
     state.ticker = ticker;
     state.providerTimestamp = timestamp;
@@ -119,7 +140,13 @@ export class MarketDataAggregator {
     this.publish('ticker.updated', providerName, symbol, canonicalSymbol, timestamp, ticker);
   }
 
-  private ingestOrderBook(providerName: string, symbol: string, canonicalSymbol: string, orderBook: OrderBook, timestamp: string): void {
+  private ingestOrderBook(
+    providerName: string,
+    symbol: string,
+    canonicalSymbol: string,
+    orderBook: OrderBook,
+    timestamp: string,
+  ): void {
     const state = this.ensureState(providerName, symbol, canonicalSymbol);
     state.orderBook = orderBook;
     state.providerTimestamp = timestamp;
@@ -130,7 +157,10 @@ export class MarketDataAggregator {
     this.publish('orderbook.updated', providerName, symbol, canonicalSymbol, timestamp, orderBook);
   }
 
-  private async fetchTicker(provider: AggregatorProviderLike, symbol: string): Promise<Ticker | undefined> {
+  private async fetchTicker(
+    provider: AggregatorProviderLike,
+    symbol: string,
+  ): Promise<Ticker | undefined> {
     if (provider.getTicker) {
       return provider.getTicker(symbol);
     }
@@ -147,7 +177,10 @@ export class MarketDataAggregator {
     };
   }
 
-  private async fetchOrderBook(provider: AggregatorProviderLike, symbol: string): Promise<OrderBook | undefined> {
+  private async fetchOrderBook(
+    provider: AggregatorProviderLike,
+    symbol: string,
+  ): Promise<OrderBook | undefined> {
     if (provider.getOrderBook) {
       return provider.getOrderBook(symbol);
     }
@@ -155,8 +188,12 @@ export class MarketDataAggregator {
     return undefined;
   }
 
-  private ensureState(providerName: string, symbol: string, canonicalSymbol: string): ProviderMarketState {
-    const existing = this.options.store.getByCanonicalSymbol(canonicalSymbol);
+  private ensureState(
+    providerName: string,
+    symbol: string,
+    canonicalSymbol: string,
+  ): ProviderMarketState {
+    const existing = this.options.store.getByExchange(providerName, symbol);
     if (existing) {
       return existing;
     }
@@ -173,7 +210,14 @@ export class MarketDataAggregator {
     return symbol.toUpperCase();
   }
 
-  private publish<TPayload>(type: AggregatorEvent['type'], provider: string, symbol: string, canonicalSymbol: string, timestamp: string, payload: TPayload): void {
+  private publish<TPayload>(
+    type: AggregatorEvent['type'],
+    provider: string,
+    symbol: string,
+    canonicalSymbol: string,
+    timestamp: string,
+    payload: TPayload,
+  ): void {
     this.options.eventBus.publish({
       type,
       provider,

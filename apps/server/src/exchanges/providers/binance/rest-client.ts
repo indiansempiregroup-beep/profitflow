@@ -1,5 +1,4 @@
-import { createHmac } from 'node:crypto';
-import type { RestClientTransport, RestRequestOptions, RestResponse } from '../../transport/rest-client.js';
+import type { RestClientTransport, RestRequestOptions } from '../../transport/rest-client.js';
 import type { RestClientOptions } from '../../transport/rest-client.js';
 import { RestClient } from '../../transport/rest-client.js';
 import type { Logger } from 'pino';
@@ -88,20 +87,26 @@ export class BinanceRestClient {
 
     try {
       const data = await this.client.request<BinanceTicker>({
-        path: '/api/v3/ticker/24hr',
+        path: `/api/v3/ticker/24hr?symbol=${encodeURIComponent(symbol)}`,
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
       });
 
-      this.logger.debug({ symbol, price: data.lastPrice }, 'Successfully fetched ticker from Binance');
+      this.logger.debug(
+        { symbol, price: data.lastPrice },
+        'Successfully fetched ticker from Binance',
+      );
 
       return data;
     } catch (error) {
       this.logger.warn({ symbol, error }, 'Failed to fetch ticker from Binance');
       const message = error instanceof Error ? error.message : 'Unknown error';
-      throw new BinanceApiError(message.includes('API Error') ? message : `Failed to fetch ticker for ${symbol}`, error as unknown);
+      throw new BinanceApiError(
+        message.includes('API Error') ? message : `Failed to fetch ticker for ${symbol}`,
+        error as unknown,
+      );
     }
   }
 
@@ -128,7 +133,7 @@ export class BinanceRestClient {
 
     try {
       const data = await this.client.request<BinanceOrderBook>({
-        path: '/api/v3/depth',
+        path: `/api/v3/depth?symbol=${encodeURIComponent(symbol)}&limit=${limit}`,
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',

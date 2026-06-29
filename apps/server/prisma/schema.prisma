@@ -8,10 +8,21 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id                      String   @id @default(cuid())
+  email                   String   @unique
+  passwordHash            String?
+  emailVerified           Boolean  @default(false)
+  verificationCode        String?
+  verificationCodeExpires DateTime?
+  resetToken              String?
+  resetTokenExpires       DateTime?
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  exchangeConnections ExchangeConnection[]
+  paperTrades         PaperTrade[]
+  pushTokens          PushToken[]
+  notifications       Notification[]
 
   @@map("users")
 }
@@ -20,10 +31,13 @@ model ExchangeConnection {
   id           String   @id @default(cuid())
   userId       String
   exchangeName String
-  credentials  Json
+  credentials  String
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
 
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, exchangeName])
   @@map("exchange_connections")
 }
 
@@ -40,14 +54,77 @@ model MarketSnapshot {
 }
 
 model ArbitrageOpportunity {
-  id               String   @id @default(cuid())
-  symbol           String
-  buyExchange      String
-  sellExchange     String
-  spread           Decimal
-  estimatedProfit  Decimal
-  detectedAt       DateTime @default(now())
-  createdAt        DateTime @default(now())
+  id                  String   @id @default(cuid())
+  symbol              String
+  buyExchange         String
+  sellExchange        String
+  spread              Decimal
+  estimatedProfit     Decimal
+  detectedAt          DateTime
+  createdAt           DateTime @default(now())
+  buyPrice            Decimal
+  confidence          Float
+  feeAnalysis         Json
+  liquidityScore      Json
+  marketType          String
+  sellPrice           Decimal
+  slippageEstimate    Json
+  sourceDataTimestamp DateTime
+  spreadPercentage    Decimal
+  validatedAt         DateTime
+
+  paperTrades PaperTrade[]
 
   @@map("arbitrage_opportunities")
+}
+
+model PaperTrade {
+  id              String   @id @default(cuid())
+  userId          String
+  opportunityId   String?
+  symbol          String
+  buyExchange     String
+  sellExchange    String
+  buyPrice        Decimal
+  sellPrice       Decimal
+  quantity        Decimal  @default(1)
+  estimatedProfit Decimal
+  status          String   @default("open")
+  openedAt        DateTime @default(now())
+  closedAt        DateTime?
+  realizedProfit  Decimal?
+  createdAt       DateTime @default(now())
+
+  user        User                  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  opportunity ArbitrageOpportunity? @relation(fields: [opportunityId], references: [id], onDelete: SetNull)
+
+  @@map("paper_trades")
+}
+
+model PushToken {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  platform  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("push_tokens")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  title     String
+  body      String
+  type      String
+  read      Boolean  @default(false)
+  data      Json?
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }

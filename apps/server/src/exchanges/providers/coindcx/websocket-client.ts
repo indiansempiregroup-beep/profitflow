@@ -11,7 +11,7 @@ export interface CoinDCXWebSocketClientOptions {
 export type CoinDCXWebSocketEventHandler = (data: Record<string, unknown>) => void;
 
 export class CoinDCXWebSocketClient extends WebSocketClient {
-  private readonly baseWsUrl = 'wss://ws.coindcx.com';
+  private baseWsUrl = 'wss://ws.coindcx.com';
   private readonly handlers = new Map<string, Set<CoinDCXWebSocketEventHandler>>();
   private ws: WebSocket | null = null;
 
@@ -27,18 +27,20 @@ export class CoinDCXWebSocketClient extends WebSocketClient {
     this.baseWsUrl = options.wsUrl ?? this.baseWsUrl;
   }
 
-  on(eventType: string, handler: CoinDCXWebSocketEventHandler): void {
+  on(eventType: string, handler: CoinDCXWebSocketEventHandler): this {
     if (!this.handlers.has(eventType)) {
       this.handlers.set(eventType, new Set());
     }
     this.handlers.get(eventType)!.add(handler);
+    return this;
   }
 
-  off(eventType: string, handler: CoinDCXWebSocketEventHandler): void {
+  off(eventType: string, handler: CoinDCXWebSocketEventHandler): this {
     const handlers = this.handlers.get(eventType);
     if (handlers) {
       handlers.delete(handler);
     }
+    return this;
   }
 
   async subscribeToTicker(symbol: string): Promise<void> {
@@ -75,9 +77,10 @@ export class CoinDCXWebSocketClient extends WebSocketClient {
           reject(error instanceof Error ? error : new Error('WebSocket connection error'));
         };
 
-        const handleMessage = (event: MessageEvent): void => {
+        const handleMessage = (event: MessageEvent | { data: string }): void => {
           try {
-            const data = JSON.parse(event.data as string) as Record<string, unknown>;
+            const raw = (event as MessageEvent).data ?? (event as { data: string }).data;
+            const data = JSON.parse(raw as string) as Record<string, unknown>;
             this.emitHandlers(data);
           } catch (error) {
             this.logger.error({ error }, 'Failed to parse CoinDCX WebSocket message');
@@ -90,9 +93,9 @@ export class CoinDCXWebSocketClient extends WebSocketClient {
         };
 
         this.ws.addEventListener('open', handleOpen);
-        this.ws.addEventListener('error', handleError);
-        this.ws.addEventListener('message', handleMessage);
-        this.ws.addEventListener('close', handleClose);
+        this.ws.addEventListener('error', handleError as unknown as EventListener);
+        this.ws.addEventListener('message', handleMessage as unknown as EventListener);
+        this.ws.addEventListener('close', handleClose as unknown as EventListener);
 
         this.state = 'connected';
         resolve();

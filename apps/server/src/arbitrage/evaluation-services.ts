@@ -1,5 +1,9 @@
-import type { Opportunity } from '@profitflow/shared';
-import type { FeeAnalysis, LiquidityScore, SlippageEstimate } from './opportunity-evaluation-service.js';
+import type {
+  Opportunity,
+  FeeAnalysis,
+  LiquidityScore,
+  SlippageEstimate,
+} from '@profitflow/shared';
 
 export class SimpleFeeAnalyzer {
   analyze(opportunity: Opportunity): FeeAnalysis {

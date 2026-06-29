@@ -1,4 +1,4 @@
-import type { RestClientTransport, RestRequestOptions, RestResponse } from './rest-client.js';
+import type { RestClientTransport, RestRequestOptions, RestResponse } from './rest-client';
 
 export class FetchTransport implements RestClientTransport {
   async request<T>(options: RestRequestOptions): Promise<RestResponse<T>> {
@@ -14,6 +14,11 @@ export class FetchTransport implements RestClientTransport {
     const data = contentType.includes('application/json')
       ? await response.json()
       : await response.text();
+
+    if (!response.ok) {
+      const message = typeof data === 'string' ? data : JSON.stringify(data);
+      throw new Error(`HTTP ${response.status} ${response.statusText}: ${message}`);
+    }
 
     return {
       status: response.status,

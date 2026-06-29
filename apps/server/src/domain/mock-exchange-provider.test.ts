@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { MarketType, TradeSide } from '@profitflow/shared';
-import { MockExchangeProvider } from './mock-exchange-provider';
+import { MockExchangeProvider } from './mock-exchange-provider.js';
 
 describe('mock exchange provider', () => {
   it('returns a ticker and accepts a mock order', async () => {

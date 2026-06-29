@@ -1,3 +1,5 @@
+import 'dotenv/config';
+
 import { buildApp } from '@/app.js';
 import { env } from '@/config/env.js';
 import { prisma } from '@/database/client.js';
@@ -21,6 +23,7 @@ const start = async () => {
 
   try {
     runtime = await initializeRuntime(app);
+    app.decorate('runtimeServices', runtime);
   } catch (error) {
     app.log.error({ error }, 'Runtime initialization failed');
     await shutdown('INIT_FAILURE', 1);

@@ -39,13 +39,35 @@ export default function SettingsScreen() {
       <Text style={styles.title}>Settings</Text>
       <Card style={styles.card}>
         <Text style={styles.cardTitle}>Profile</Text>
-        <Text style={styles.cardText}>Signed in as {profileQuery.data?.user.email ?? 'Unknown user'}.</Text>
+        <Text style={styles.cardText}>
+          Signed in as {profileQuery.data?.user.email ?? 'Unknown user'}.
+        </Text>
         <Text style={styles.cardText}>
           {profileQuery.data?.connectedExchanges.length
             ? `${profileQuery.data.connectedExchanges.length} connected exchange${profileQuery.data.connectedExchanges.length > 1 ? 's' : ''}.`
             : 'No connected exchanges yet.'}
         </Text>
-        <Button label="Logout" variant="danger" onPress={handleSignOut} style={styles.logoutButton} />
+        <Button
+          label="View profile"
+          variant="secondary"
+          onPress={() => router.push('/profile' as never)}
+        />
+        <Button
+          label="Manage exchanges"
+          variant="secondary"
+          onPress={() => router.push('/exchange-management' as never)}
+        />
+        <Button
+          label="Notifications"
+          variant="secondary"
+          onPress={() => router.push('/notifications' as never)}
+        />
+        <Button
+          label="Logout"
+          variant="danger"
+          onPress={handleSignOut}
+          style={styles.logoutButton}
+        />
       </Card>
     </View>
   );

@@ -17,3 +17,14 @@ export interface ApiErrorResponse {
   success: false;
   error: ApiErrorPayload;
 }
+
+export interface AuthUser {
+  id: string;
+  email: string;
+}
+
+export interface AuthResponse {
+  success: true;
+  token: string;
+  user: AuthUser;
+}

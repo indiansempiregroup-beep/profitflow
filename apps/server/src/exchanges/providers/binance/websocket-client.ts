@@ -1,6 +1,10 @@
 import { WebSocketClient } from '../../transport/websocket-client.js';
 import type { Logger } from 'pino';
-import type { BinanceWebSocketMessage, BinanceWebSocketTickerData, BinanceWebSocketDepthData } from './types.js';
+import type {
+  BinanceWebSocketMessage,
+  BinanceWebSocketTickerData,
+  BinanceWebSocketDepthData,
+} from './types.js';
 import { BinanceWebSocketError } from './errors.js';
 
 export interface BinanceWebSocketClientOptions {
@@ -13,7 +17,7 @@ export interface BinanceWebSocketClientOptions {
 export type BinanceWebSocketEventHandler = (data: BinanceWebSocketMessage) => void;
 
 export class BinanceWebSocketClient extends WebSocketClient {
-  private readonly baseWsUrl = 'wss://stream.binance.com:9443/ws';
+  private baseWsUrl = 'wss://stream.binance.com:9443/ws';
   private readonly handlers = new Map<string, Set<BinanceWebSocketEventHandler>>();
   private ws: WebSocket | null = null;
 
@@ -26,21 +30,25 @@ export class BinanceWebSocketClient extends WebSocketClient {
       reconnectMaxAttempts: options.reconnectMaxAttempts ?? 5,
       reconnectBaseDelayMs: options.reconnectBaseDelayMs ?? 1000,
     });
-    this.baseWsUrl = options.wsUrl ?? this.baseWsUrl;
+    if (options.wsUrl) {
+      this.baseWsUrl = options.wsUrl;
+    }
   }
 
-  on(eventType: string, handler: BinanceWebSocketEventHandler): void {
+  on(eventType: string, handler: BinanceWebSocketEventHandler): this {
     if (!this.handlers.has(eventType)) {
       this.handlers.set(eventType, new Set());
     }
     this.handlers.get(eventType)!.add(handler);
+    return this;
   }
 
-  off(eventType: string, handler: BinanceWebSocketEventHandler): void {
+  off(eventType: string, handler: BinanceWebSocketEventHandler): this {
     const handlers = this.handlers.get(eventType);
     if (handlers) {
       handlers.delete(handler);
     }
+    return this;
   }
 
   async subscribeToTicker(symbol: string): Promise<void> {
@@ -71,25 +79,31 @@ export class BinanceWebSocketClient extends WebSocketClient {
             const handleOpen = (): void => {
               this.logger.info('Binance WebSocket connected');
               this.ws?.removeEventListener('open', handleOpen);
-              this.ws?.removeEventListener('error', handleError);
+              this.ws?.removeEventListener('error', handleError as EventListener);
               this.state = 'connected';
               resolve();
             };
 
-            const handleError = (error: Error): void => {
+            const handleError = (event: Event | Error): void => {
+              const error =
+                event instanceof Error ? event : new Error('WebSocket connection error');
               this.logger.error({ error }, 'Binance WebSocket connection error');
               this.ws?.removeEventListener('open', handleOpen);
-              this.ws?.removeEventListener('error', handleError);
+              this.ws?.removeEventListener('error', handleError as EventListener);
               reject(error);
             };
 
-            const handleMessage = (event: { data: string }): void => {
+            const handleMessage = (event: MessageEvent | { data: string }): void => {
               try {
-                const data = JSON.parse(event.data) as BinanceWebSocketMessage;
+                const raw = (event as MessageEvent).data ?? (event as { data: string }).data;
+                const data = JSON.parse(raw as string) as BinanceWebSocketMessage;
                 this.emitHandlers(data);
               } catch (error) {
                 this.logger.error({ error }, 'Failed to parse WebSocket message');
-                this.emit('error', new BinanceWebSocketError('Failed to parse WebSocket message', error as unknown));
+                this.emit(
+                  'error',
+                  new BinanceWebSocketError('Failed to parse WebSocket message', error as unknown),
+                );
               }
             };
 
@@ -99,9 +113,9 @@ export class BinanceWebSocketClient extends WebSocketClient {
             };
 
             this.ws.addEventListener('open', handleOpen);
-            this.ws.addEventListener('error', handleError);
-            this.ws.addEventListener('message', handleMessage);
-            this.ws.addEventListener('close', handleClose);
+            this.ws.addEventListener('error', handleError as unknown as EventListener);
+            this.ws.addEventListener('message', handleMessage as unknown as EventListener);
+            this.ws.addEventListener('close', handleClose as unknown as EventListener);
           } catch (error) {
             this.logger.error({ error }, 'Failed to create WebSocket');
             reject(error);
@@ -114,7 +128,9 @@ export class BinanceWebSocketClient extends WebSocketClient {
     });
   }
 
-  private async resolveWebSocketImplementation(): Promise<new (url: string) => WebSocket | undefined> {
+  private async resolveWebSocketImplementation(): Promise<
+    (new (url: string) => WebSocket) | undefined
+  > {
     try {
       const wsModule = await import('ws');
       return (wsModule.default ?? wsModule) as new (url: string) => WebSocket;

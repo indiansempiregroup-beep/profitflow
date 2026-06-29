@@ -1,19 +1,25 @@
 export interface CoinDCXMarket {
   symbol: string;
-  baseAsset: string;
-  quoteAsset: string;
-  minQty: string;
-  tickSize: string;
-  isActive: boolean;
+  baseAsset?: string;
+  quoteAsset?: string;
+  base_currency_short_name?: string;
+  target_currency_short_name?: string;
+  minQty?: string;
+  tickSize?: string;
+  isActive?: boolean;
+  status?: string;
 }
 
 export interface CoinDCXTicker {
-  symbol: string;
-  lastPrice: string;
+  symbol?: string;
+  market?: string;
+  lastPrice?: string;
+  last_price?: string;
   volume: string;
-  high: string;
-  low: string;
-  change: string;
+  high?: string;
+  low?: string;
+  change?: string;
+  change_24_hour?: string;
   bid: string;
   ask: string;
 }

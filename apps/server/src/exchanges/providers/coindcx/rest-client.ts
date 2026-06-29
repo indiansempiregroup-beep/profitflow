@@ -2,7 +2,13 @@ import type { Logger } from 'pino';
 import { RestClient } from '../../transport/rest-client.js';
 import type { RestClientOptions, RestClientTransport } from '../../transport/rest-client.js';
 import { CoinDCXApiError } from './errors.js';
-import type { CoinDCXExchangeInfo, CoinDCXFee, CoinDCXMarket, CoinDCXOrderBook, CoinDCXTicker } from './types.js';
+import type {
+  CoinDCXExchangeInfo,
+  CoinDCXFee,
+  CoinDCXMarket,
+  CoinDCXOrderBook,
+  CoinDCXTicker,
+} from './types.js';
 
 export interface CoinDCXRestClientOptions extends RestClientOptions {
   apiKey?: string;
@@ -34,7 +40,7 @@ export class CoinDCXRestClient {
 
     try {
       const data = await this.client.request<CoinDCXMarket[]>({
-        path: '/v1/markets',
+        path: '/exchange/v1/markets_details',
         method: 'GET',
       });
 
@@ -50,13 +56,22 @@ export class CoinDCXRestClient {
     this.logger.debug({ symbol }, 'Fetching ticker from CoinDCX');
 
     try {
-      const data = await this.client.request<CoinDCXTicker>({
-        path: `/v1/ticker/${symbol}`,
+      const data = await this.client.request<CoinDCXTicker[]>({
+        path: '/exchange/ticker',
         method: 'GET',
       });
+      const ticker = data.find(
+        (entry) => (entry.market ?? entry.symbol)?.toUpperCase() === symbol.toUpperCase(),
+      );
+      if (!ticker) {
+        throw new Error(`Ticker ${symbol} not found`);
+      }
 
-      this.logger.debug({ symbol, price: data.lastPrice }, 'Successfully fetched ticker from CoinDCX');
-      return data;
+      this.logger.debug(
+        { symbol, price: ticker.last_price ?? ticker.lastPrice },
+        'Successfully fetched ticker from CoinDCX',
+      );
+      return ticker;
     } catch (error) {
       this.logger.warn({ symbol, error }, 'Failed to fetch ticker from CoinDCX');
       throw new CoinDCXApiError(`Failed to fetch CoinDCX ticker for ${symbol}`, error as unknown);
@@ -68,7 +83,7 @@ export class CoinDCXRestClient {
 
     try {
       const data = await this.client.request<CoinDCXTicker[]>({
-        path: '/v1/tickers',
+        path: '/exchange/ticker',
         method: 'GET',
       });
 
@@ -84,11 +99,12 @@ export class CoinDCXRestClient {
     this.logger.debug({ symbol, limit }, 'Fetching order book from CoinDCX');
 
     try {
-      const path = limit > 0 ? `/v1/orderbook/${symbol}?limit=${limit}` : `/v1/orderbook/${symbol}`;
-      const data = await this.client.request<CoinDCXOrderBook>({
-        path,
-        method: 'GET',
-      });
+      const ticker = await this.getTicker(symbol);
+      const data: CoinDCXOrderBook = {
+        symbol,
+        bids: [[ticker.bid, '1']],
+        asks: [[ticker.ask, '1']],
+      };
 
       this.logger.debug(
         { symbol, bidCount: data.bids.length, askCount: data.asks.length },
@@ -97,7 +113,10 @@ export class CoinDCXRestClient {
       return data;
     } catch (error) {
       this.logger.warn({ symbol, error }, 'Failed to fetch order book from CoinDCX');
-      throw new CoinDCXApiError(`Failed to fetch CoinDCX order book for ${symbol}`, error as unknown);
+      throw new CoinDCXApiError(
+        `Failed to fetch CoinDCX order book for ${symbol}`,
+        error as unknown,
+      );
     }
   }
 
@@ -106,7 +125,7 @@ export class CoinDCXRestClient {
 
     try {
       const data = await this.client.request<CoinDCXFee[]>({
-        path: '/v1/fees',
+        path: '/exchange/v1/fees',
         method: 'GET',
       });
 
@@ -139,7 +158,7 @@ export class CoinDCXRestClient {
 
     try {
       await this.client.request<Record<string, unknown>>({
-        path: '/v1/markets',
+        path: '/exchange/v1/markets',
         method: 'GET',
       });
       this.logger.debug('CoinDCX API ping successful');

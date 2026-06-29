@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import * as SecureStore from 'expo-secure-store';
 import { API_BASE_URL, TOKEN_KEY } from './constants';
+import { getStoredItem } from './secure-storage';
 
 export type DashboardSocketMessage =
   | { type: 'dashboard.connected'; payload: { opportunityCount: number } }
@@ -10,14 +10,14 @@ export type DashboardSocketMessage =
 const toWebSocketUrl = (baseUrl: string) => baseUrl.replace(/^http/, 'ws');
 
 export const useDashboardSocket = (onMessage: (message: DashboardSocketMessage) => void) => {
-  const socketRef = useRef<WebSocket | null>(null);
+  const socketRef = useRef<{ close: () => void } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     let reconnectAttempts = 0;
 
     const connect = async () => {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await getStoredItem(TOKEN_KEY);
       if (!token || cancelled) {
         return;
       }
@@ -28,7 +28,7 @@ export const useDashboardSocket = (onMessage: (message: DashboardSocketMessage) 
 
       socket.onopen = () => {
         reconnectAttempts = 0;
-        console.log('[DashboardSocket] connected', url);
+        console.info('[DashboardSocket] connected', url);
       };
 
       socket.onmessage = (event) => {
@@ -45,7 +45,7 @@ export const useDashboardSocket = (onMessage: (message: DashboardSocketMessage) 
       };
 
       socket.onclose = () => {
-        console.log('[DashboardSocket] disconnected');
+        console.info('[DashboardSocket] disconnected');
         if (!cancelled) {
           reconnectAttempts += 1;
           const delay = Math.min(30000, 2000 * reconnectAttempts);

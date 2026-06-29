@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { Opportunity, ValidatedOpportunity } from '@profitflow/shared';
+import { MarketType, ExchangeName } from '@profitflow/shared';
 import { InternalEventBus } from '@/exchanges/market-data/event-bus.js';
 import { NormalizedMarketStore } from '@/exchanges/market-data/store.js';
 import { StaleDataDetector } from '@/exchanges/market-data/stale-detector.js';
@@ -36,9 +37,9 @@ describe('OpportunityEvaluationService', () => {
     const opportunity: Opportunity = {
       id: 'BTC/USDT:BINANCE:COINDCX:2026-01-01T00:00:00.000Z',
       symbol: 'BTC/USDT',
-      marketType: 'SPOT',
-      buyExchange: 'BINANCE',
-      sellExchange: 'COINDCX',
+      marketType: MarketType.SPOT,
+      buyExchange: ExchangeName.BINANCE,
+      sellExchange: ExchangeName.COINDCX,
       buyPrice: 100,
       sellPrice: 101.5,
       spread: 1.5,

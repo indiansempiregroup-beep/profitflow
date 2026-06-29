@@ -35,9 +35,9 @@ export class CoinDCXPriceNormalizer {
       id: `${ExchangeName.COINDCX}:${symbol}:${Date.now()}`,
       exchange: ExchangeName.COINDCX,
       symbol,
-      price: this.normalizePrice(ticker.lastPrice),
+      price: this.normalizePrice(ticker.lastPrice ?? ticker.last_price ?? 0),
       volume24h: this.normalizeVolume(ticker.volume),
-      change24h: this.normalizePercent(ticker.change),
+      change24h: this.normalizePercent(ticker.change ?? ticker.change_24_hour ?? 0),
       generatedAt: new Date().toISOString(),
     };
   }

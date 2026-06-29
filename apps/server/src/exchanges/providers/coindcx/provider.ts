@@ -17,11 +17,14 @@ export interface CoinDCXProviderConfig extends ExchangeConfig {
 }
 
 export class CoinDCXProvider extends BaseExchangeProvider {
-  private readonly restClient: CoinDCXRestClient;
-  private readonly websocketClient: CoinDCXWebSocketClient | null;
+  private readonly apiClient: CoinDCXRestClient;
+  private readonly coinDcXWebsocketClient: CoinDCXWebSocketClient | null;
   private readonly priceNormalizer = new CoinDCXPriceNormalizer();
   private readonly symbolMapper = new CoinDCXSymbolMapper();
-  private availableMarkets = new Map<string, { symbol: string; baseAsset: string; quoteAsset: string }>();
+  private availableMarkets = new Map<
+    string,
+    { symbol: string; baseAsset: string; quoteAsset: string }
+  >();
   private exchangeInfoFetched = false;
 
   constructor(
@@ -31,7 +34,7 @@ export class CoinDCXProvider extends BaseExchangeProvider {
   ) {
     super('COINDCX', config, undefined, undefined);
 
-    this.restClient = new CoinDCXRestClient(logger, transport, {
+    this.apiClient = new CoinDCXRestClient(logger, transport, {
       baseUrl: config.baseUrl,
       timeoutMs: config.timeoutMs ?? 10000,
       maxRetries: config.maxRetries ?? 3,
@@ -41,7 +44,7 @@ export class CoinDCXProvider extends BaseExchangeProvider {
       apiSecret: config.apiSecret,
     });
 
-    this.websocketClient = config.enableWebSocket
+    this.coinDcXWebsocketClient = config.enableWebSocket
       ? new CoinDCXWebSocketClient(logger, {
           heartbeatIntervalMs: config.heartbeatIntervalMs ?? 30000,
           reconnectMaxAttempts: config.reconnectMaxAttempts ?? 5,
@@ -54,25 +57,24 @@ export class CoinDCXProvider extends BaseExchangeProvider {
     this.logger.info('Connecting to CoinDCX provider');
 
     try {
-      await this.restClient.ping();
+      await this.apiClient.ping();
       if (!this.exchangeInfoFetched) {
         await this.loadExchangeInfo();
       }
 
-      if (this.websocketClient) {
+      if (this.coinDcXWebsocketClient) {
         try {
-          await this.websocketClient.connect();
+          await this.coinDcXWebsocketClient.connect();
           this.logger.info('CoinDCX WebSocket connected');
         } catch (error) {
           this.logger.warn({ error }, 'CoinDCX WebSocket connection failed (non-blocking)');
         }
-
-        this.websocketClient.on('error', (err) => {
+        this.coinDcXWebsocketClient.on('error', (err) => {
           this.logger.warn({ err }, 'CoinDCX WebSocket error emitted');
           this.markError(err);
         });
 
-        this.websocketClient.on('disconnected', () => {
+        this.coinDcXWebsocketClient.on('disconnected', () => {
           this.logger.warn('CoinDCX WebSocket event: disconnected');
         });
       }
@@ -91,8 +93,8 @@ export class CoinDCXProvider extends BaseExchangeProvider {
     this.logger.info('Disconnecting from CoinDCX provider');
 
     try {
-      if (this.websocketClient) {
-        await this.websocketClient.disconnect();
+      if (this.coinDcXWebsocketClient) {
+        await this.coinDcXWebsocketClient.disconnect();
         this.logger.debug('CoinDCX WebSocket disconnected');
       }
 
@@ -117,7 +119,7 @@ export class CoinDCXProvider extends BaseExchangeProvider {
 
     try {
       const coinDcXSymbol = this.symbolMapper.toCoinDCX(symbol);
-      const ticker = await this.restClient.getTicker(coinDcXSymbol);
+      const ticker = await this.apiClient.getTicker(coinDcXSymbol);
       const normalized = this.priceNormalizer.normalizeTicker(ticker, symbol);
 
       this.cache.set(`ticker:${symbol}`, normalized, 5000);
@@ -137,11 +139,11 @@ export class CoinDCXProvider extends BaseExchangeProvider {
     this.logger.debug('Fetching all tickers from CoinDCX');
 
     try {
-      const tickers = await this.restClient.getTickers();
+      const tickers = await this.apiClient.getTickers();
       const normalized = tickers
-        .filter((ticker) => this.availableMarkets.has(ticker.symbol))
+        .filter((ticker) => this.availableMarkets.has(ticker.symbol ?? ticker.market ?? ''))
         .map((ticker) => {
-          const symbol = this.symbolMapper.fromCoinDCX(ticker.symbol);
+          const symbol = this.symbolMapper.fromCoinDCX(ticker.symbol ?? ticker.market ?? '');
           return this.priceNormalizer.normalizeTicker(ticker, symbol);
         });
 
@@ -163,7 +165,7 @@ export class CoinDCXProvider extends BaseExchangeProvider {
 
     try {
       const coinDcXSymbol = this.symbolMapper.toCoinDCX(symbol);
-      const orderBook = await this.restClient.getOrderBook(coinDcXSymbol, limit);
+      const orderBook = await this.apiClient.getOrderBook(coinDcXSymbol, limit);
       const normalized = this.priceNormalizer.normalizeOrderBook(orderBook, symbol);
 
       this.cache.set(`orderbook:${symbol}`, normalized, 1000);
@@ -183,7 +185,7 @@ export class CoinDCXProvider extends BaseExchangeProvider {
     this.logger.debug('Fetching trading fees from CoinDCX');
 
     try {
-      const fees = await this.restClient.getTradingFees();
+      const fees = await this.apiClient.getTradingFees();
       const normalized = fees
         .filter((fee) => this.availableMarkets.has(fee.symbol))
         .map((fee) => {
@@ -204,7 +206,12 @@ export class CoinDCXProvider extends BaseExchangeProvider {
     }
   }
 
-  async getExchangeInfo(): Promise<{ name: string; timezone: string; serverTime: number; symbolCount: number }> {
+  async getExchangeInfo(): Promise<{
+    name: string;
+    timezone: string;
+    serverTime: number;
+    symbolCount: number;
+  }> {
     if (!this.exchangeInfoFetched) {
       await this.loadExchangeInfo();
     }
@@ -221,24 +228,31 @@ export class CoinDCXProvider extends BaseExchangeProvider {
     this.logger.debug('Loading exchange info from CoinDCX');
 
     try {
-      const exchangeInfo = await this.restClient.getExchangeInfo();
+      const exchangeInfo = await this.apiClient.getExchangeInfo();
       this.availableMarkets.clear();
 
       for (const market of exchangeInfo.markets) {
-        if (market.isActive) {
+        const baseAsset = market.baseAsset ?? market.target_currency_short_name;
+        const quoteAsset = market.quoteAsset ?? market.base_currency_short_name;
+        const isActive = market.isActive ?? market.status !== 'inactive';
+
+        if (isActive && baseAsset && quoteAsset) {
           this.availableMarkets.set(market.symbol, {
             symbol: market.symbol,
-            baseAsset: market.baseAsset,
-            quoteAsset: market.quoteAsset,
+            baseAsset,
+            quoteAsset,
           });
 
-          const canonical = this.createCanonicalSymbol(market.baseAsset, market.quoteAsset);
+          const canonical = this.createCanonicalSymbol(baseAsset, quoteAsset);
           this.symbolMapper.register(market.symbol, canonical);
         }
       }
 
       this.exchangeInfoFetched = true;
-      this.logger.info({ symbolCount: this.availableMarkets.size }, 'Exchange info loaded successfully');
+      this.logger.info(
+        { symbolCount: this.availableMarkets.size },
+        'Exchange info loaded successfully',
+      );
     } catch (error) {
       this.logger.error({ error }, 'Failed to load exchange info from CoinDCX');
       throw error;
@@ -246,7 +260,7 @@ export class CoinDCXProvider extends BaseExchangeProvider {
   }
 
   getWebSocketClient(): CoinDCXWebSocketClient | null {
-    return this.websocketClient;
+    return this.coinDcXWebsocketClient;
   }
 
   private createCanonicalSymbol(baseAsset: string, quoteAsset: string): string {

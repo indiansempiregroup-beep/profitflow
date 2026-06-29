@@ -7,8 +7,7 @@ import { BinanceRestClient } from './rest-client.js';
 import { BinanceWebSocketClient } from './websocket-client.js';
 import { BinanceSymbolMapper } from './normalizers/symbol-mapper.js';
 import { BinancePriceNormalizer } from './normalizers/price-normalizer.js';
-import type { BinanceTradeFee } from './types.js';
-import { BinanceApiError, BinanceWebSocketError } from './errors.js';
+import { BinanceApiError } from './errors.js';
 import { ProviderError } from '@profitflow/shared';
 
 export interface BinanceProviderConfig extends ExchangeConfig {
@@ -18,11 +17,12 @@ export interface BinanceProviderConfig extends ExchangeConfig {
 }
 
 export class BinanceProvider extends BaseExchangeProvider {
-  private readonly restClient: BinanceRestClient;
-  private readonly websocketClient: BinanceWebSocketClient | null;
+  private readonly apiClient: BinanceRestClient;
+  private readonly binanceWebsocketClient: BinanceWebSocketClient | null;
   private readonly symbolMapper: BinanceSymbolMapper;
   private readonly priceNormalizer: BinancePriceNormalizer;
-  private availableMarkets: Map<string, { symbol: string; baseAsset: string; quoteAsset: string }> = new Map();
+  private availableMarkets: Map<string, { symbol: string; baseAsset: string; quoteAsset: string }> =
+    new Map();
   private exchangeInfoFetched = false;
 
   constructor(
@@ -32,7 +32,7 @@ export class BinanceProvider extends BaseExchangeProvider {
   ) {
     super('BINANCE', config, undefined, undefined);
 
-    this.restClient = new BinanceRestClient(logger, transport, {
+    this.apiClient = new BinanceRestClient(logger, transport, {
       baseUrl: config.baseUrl,
       timeoutMs: config.timeoutMs ?? 10000,
       maxRetries: config.maxRetries ?? 3,
@@ -42,7 +42,7 @@ export class BinanceProvider extends BaseExchangeProvider {
       apiSecret: config.apiSecret,
     });
 
-    this.websocketClient = config.enableWebSocket
+    this.binanceWebsocketClient = config.enableWebSocket
       ? new BinanceWebSocketClient(logger, {
           heartbeatIntervalMs: config.heartbeatIntervalMs ?? 30000,
           reconnectMaxAttempts: config.reconnectMaxAttempts ?? 5,
@@ -62,7 +62,7 @@ export class BinanceProvider extends BaseExchangeProvider {
 
     try {
       // Verify API connectivity
-      await this.restClient.ping();
+      await this.apiClient.ping();
       this.logger.debug('Binance API ping successful');
 
       // Fetch exchange info once
@@ -71,24 +71,24 @@ export class BinanceProvider extends BaseExchangeProvider {
       }
 
       // Connect WebSocket if enabled
-      if (this.websocketClient) {
+      if (this.binanceWebsocketClient) {
         try {
-          await this.websocketClient.connect();
+          await this.binanceWebsocketClient.connect();
           this.logger.info('Binance WebSocket connected');
         } catch (error) {
           this.logger.warn({ error }, 'WebSocket connection failed (non-blocking)');
           // Don't fail provider connection if WebSocket fails
         }
-        this.websocketClient.on('error', (err) => {
+        this.binanceWebsocketClient.on('error', (err) => {
           this.logger.warn({ err }, 'WebSocket error emitted');
           this.markError(err);
         });
 
-        this.websocketClient.on('connected', () => {
+        this.binanceWebsocketClient.on('connected', () => {
           this.logger.info('Binance WebSocket event: connected');
         });
 
-        this.websocketClient.on('disconnected', () => {
+        this.binanceWebsocketClient.on('disconnected', () => {
           this.logger.warn('Binance WebSocket event: disconnected');
         });
       }
@@ -107,8 +107,8 @@ export class BinanceProvider extends BaseExchangeProvider {
     this.logger.info('Disconnecting from Binance provider');
 
     try {
-      if (this.websocketClient) {
-        await this.websocketClient.disconnect();
+      if (this.binanceWebsocketClient) {
+        await this.binanceWebsocketClient.disconnect();
         this.logger.debug('Binance WebSocket disconnected');
       }
 
@@ -133,7 +133,7 @@ export class BinanceProvider extends BaseExchangeProvider {
 
     try {
       const binanceSymbol = this.symbolMapper.toBinance(symbol);
-      const binanceTicker = await this.restClient.getTicker(binanceSymbol);
+      const binanceTicker = await this.apiClient.getTicker(binanceSymbol);
       const ticker = this.priceNormalizer.normalizeTicker(binanceTicker, symbol);
 
       this.cache.set(`ticker:${symbol}`, ticker, 5000); // Cache for 5 seconds
@@ -154,7 +154,7 @@ export class BinanceProvider extends BaseExchangeProvider {
     this.logger.debug('Fetching all tickers from Binance');
 
     try {
-      const binanceTickers = await this.restClient.getTickers();
+      const binanceTickers = await this.apiClient.getTickers();
       const tickers = binanceTickers
         .filter((bt) => this.availableMarkets.has(bt.symbol))
         .map((bt) => {
@@ -183,7 +183,7 @@ export class BinanceProvider extends BaseExchangeProvider {
 
     try {
       const binanceSymbol = this.symbolMapper.toBinance(symbol);
-      const binanceOrderBook = await this.restClient.getOrderBook(binanceSymbol, limit);
+      const binanceOrderBook = await this.apiClient.getOrderBook(binanceSymbol, limit);
       const orderBook = this.priceNormalizer.normalizeOrderBook(binanceOrderBook, symbol);
 
       this.cache.set(`orderbook:${symbol}`, orderBook, 1000); // Cache for 1 second
@@ -204,7 +204,7 @@ export class BinanceProvider extends BaseExchangeProvider {
     this.logger.debug('Fetching trading fees from Binance');
 
     try {
-      const accountTradeList = await this.restClient.getTradingFees();
+      const accountTradeList = await this.apiClient.getTradingFees();
       const fees = accountTradeList.tradeFees
         .filter((tf) => this.availableMarkets.has(tf.symbol))
         .map((tf) => {
@@ -247,14 +247,14 @@ export class BinanceProvider extends BaseExchangeProvider {
   }
 
   getWebSocketClient(): BinanceWebSocketClient | null {
-    return this.websocketClient;
+    return this.binanceWebsocketClient;
   }
 
   private async loadExchangeInfo(): Promise<void> {
     this.logger.debug('Loading exchange info from Binance');
 
     try {
-      const exchangeInfo = await this.restClient.getExchangeInfo();
+      const exchangeInfo = await this.apiClient.getExchangeInfo();
 
       this.availableMarkets.clear();
 
@@ -273,7 +273,10 @@ export class BinanceProvider extends BaseExchangeProvider {
       }
 
       this.exchangeInfoFetched = true;
-      this.logger.info({ symbolCount: this.availableMarkets.size }, 'Exchange info loaded successfully');
+      this.logger.info(
+        { symbolCount: this.availableMarkets.size },
+        'Exchange info loaded successfully',
+      );
     } catch (error) {
       this.logger.error({ error }, 'Failed to load exchange info from Binance');
       throw error;

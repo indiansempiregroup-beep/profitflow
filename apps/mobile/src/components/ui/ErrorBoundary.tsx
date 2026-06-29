@@ -1,14 +1,14 @@
 import React from 'react';
 import { View, Text, Pressable, StyleSheet } from 'react-native';
-import { useTheme } from './ThemeProvider';
+import { ThemeContext } from './ThemeProvider';
 
 interface ErrorBoundaryState {
   hasError: boolean;
   error?: Error;
 }
 
-export class ErrorBoundary extends React.Component<React.PropsWithChildren<{}>, ErrorBoundaryState> {
-  constructor(props: React.PropsWithChildren<{}>) {
+export class ErrorBoundary extends React.Component<React.PropsWithChildren, ErrorBoundaryState> {
+  constructor(props: React.PropsWithChildren) {
     super(props);
     this.state = { hasError: false };
   }
@@ -26,17 +26,28 @@ export class ErrorBoundary extends React.Component<React.PropsWithChildren<{}>, 
   };
 
   render() {
-    const theme = useTheme();
-
     if (this.state.hasError) {
       return (
-        <View style={[styles.container, { backgroundColor: theme.colors.background }]}> 
-          <Text style={[styles.title, { color: theme.colors.textPrimary }]}>Something went wrong.</Text>
-          <Text style={[styles.message, { color: theme.colors.textSecondary }]}>An unexpected error occurred. Please try restarting the app.</Text>
-          <Pressable style={[styles.button, { backgroundColor: theme.colors.primary }]} onPress={this.handleReset}>
-            <Text style={[styles.buttonLabel, { color: theme.colors.primaryForeground }]}>Try again</Text>
-          </Pressable>
-        </View>
+        <ThemeContext.Consumer>
+          {(theme) => (
+            <View style={[styles.container, { backgroundColor: theme.colors.background }]}>
+              <Text style={[styles.title, { color: theme.colors.textPrimary }]}>
+                Something went wrong.
+              </Text>
+              <Text style={[styles.message, { color: theme.colors.textSecondary }]}>
+                An unexpected error occurred. Please try restarting the app.
+              </Text>
+              <Pressable
+                style={[styles.button, { backgroundColor: theme.colors.primary }]}
+                onPress={this.handleReset}
+              >
+                <Text style={[styles.buttonLabel, { color: theme.colors.primaryForeground }]}>
+                  Try again
+                </Text>
+              </Pressable>
+            </View>
+          )}
+        </ThemeContext.Consumer>
       );
     }
 

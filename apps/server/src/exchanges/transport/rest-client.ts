@@ -9,6 +9,7 @@ export interface RestRequestOptions {
   body?: unknown;
   timeoutMs?: number;
   signer?: RequestSigner;
+  baseUrl?: string;
 }
 
 export interface RestResponse<T> {
@@ -21,11 +22,17 @@ export interface RestClientContext {
   request: RestRequestOptions;
 }
 
-export type RestMiddleware = (context: RestClientContext, next: () => Promise<unknown>) => Promise<unknown>;
+export type RestMiddleware = (
+  context: RestClientContext,
+  next: () => Promise<unknown>,
+) => Promise<unknown>;
 
 export interface RestInterceptor {
   onRequest?: (context: RestClientContext) => Promise<void> | void;
-  onResponse?: (context: RestClientContext, response: RestResponse<unknown>) => Promise<void> | void;
+  onResponse?: (
+    context: RestClientContext,
+    response: RestResponse<unknown>,
+  ) => Promise<void> | void;
   onError?: (context: RestClientContext, error: unknown) => Promise<void> | void;
 }
 
@@ -79,9 +86,13 @@ export class RestClient {
     throw lastError;
   }
 
-  private async prepareRequest(options: RestRequestOptions, attempt: number): Promise<RestRequestOptions> {
+  private async prepareRequest(
+    options: RestRequestOptions,
+    attempt: number,
+  ): Promise<RestRequestOptions> {
     const request: RestRequestOptions = {
       ...options,
+      baseUrl: options.baseUrl ?? this.options.baseUrl,
       headers: {
         ...(options.headers ?? {}),
         'Content-Type': 'application/json',

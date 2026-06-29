@@ -1,8 +1,9 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import pino from 'pino';
-import { BinanceProvider } from '../provider.js';
-import type { RestClientTransport } from '../../transport/rest-client.js';
-import type { BinanceExchangeInfo, BinanceTicker, BinanceOrderBook, BinanceAccountTradeList } from '../types.js';
+import { BinanceProvider } from '../provider';
+import type { RestClientTransport } from '@exchanges/transport/rest-client';
+import type { BinanceExchangeInfo, BinanceTicker, BinanceOrderBook } from '../types';
 
 class MockTransport implements RestClientTransport {
   request = vi.fn();

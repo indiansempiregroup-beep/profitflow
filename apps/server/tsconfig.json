@@ -1,10 +1,9 @@
 {
   "extends": "../../tsconfig.base.json",
   "compilerOptions": {
-    "module": "NodeNext",
-    "moduleResolution": "NodeNext",
     "outDir": "dist",
     "rootDir": "src",
+    "lib": ["ES2022", "DOM"],
     "baseUrl": ".",
     "paths": {
       "@/*": ["src/*"],
@@ -20,7 +19,8 @@
       "@jobs/*": ["src/jobs/*"],
       "@utils/*": ["src/utils/*"]
     },
-    "types": ["node"]
+    "types": ["node"],
+    "noEmit": false
   },
-  "include": ["src/**/*.ts"]
+  "include": ["src/**/*"]
 }

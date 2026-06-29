@@ -1,13 +1,13 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import pino from 'pino';
-import { BinanceRestClient } from '../rest-client.js';
-import type { RestClientTransport, RestResponse } from '../../transport/rest-client.js';
+import { BinanceRestClient } from '../rest-client';
+import type { RestClientTransport } from '@exchanges/transport/rest-client';
 import type {
   BinanceExchangeInfo,
   BinanceTicker,
   BinanceOrderBook,
   BinanceAccountTradeList,
-} from '../types.js';
+} from '../types';
 
 describe('BinanceRestClient', () => {
   let mockTransport: RestClientTransport;
@@ -42,11 +42,12 @@ describe('BinanceRestClient', () => {
           filters: [],
           permissions: ['SPOT'],
           defaultAccountPermissions: ['TRADING'],
+          status: 'TRADING',
         },
       ],
     };
 
-    vi.mocked(mockTransport.request).mockResolvedValue(mockData);
+    vi.mocked(mockTransport.request).mockResolvedValue({ data: mockData, status: 200 });
 
     const info = await client.getExchangeInfo();
 
@@ -80,7 +81,7 @@ describe('BinanceRestClient', () => {
       count: 100,
     };
 
-    vi.mocked(mockTransport.request).mockResolvedValue(mockTicker);
+    vi.mocked(mockTransport.request).mockResolvedValue({ data: mockTicker, status: 200 });
 
     const ticker = await client.getTicker('BTCUSDT');
 
@@ -115,7 +116,7 @@ describe('BinanceRestClient', () => {
       },
     ];
 
-    vi.mocked(mockTransport.request).mockResolvedValue(mockTickers);
+    vi.mocked(mockTransport.request).mockResolvedValue({ data: mockTickers, status: 200 });
 
     const tickers = await client.getTickers();
 
@@ -136,7 +137,7 @@ describe('BinanceRestClient', () => {
       lastUpdateId: 123456,
     };
 
-    vi.mocked(mockTransport.request).mockResolvedValue(mockOrderBook);
+    vi.mocked(mockTransport.request).mockResolvedValue({ data: mockOrderBook, status: 200 });
 
     const orderBook = await client.getOrderBook('BTCUSDT', 20);
 
@@ -159,7 +160,7 @@ describe('BinanceRestClient', () => {
       sellerCommission: 0,
     };
 
-    vi.mocked(mockTransport.request).mockResolvedValue(mockFees);
+    vi.mocked(mockTransport.request).mockResolvedValue({ data: mockFees, status: 200 });
 
     const fees = await client.getTradingFees();
 
@@ -175,7 +176,7 @@ describe('BinanceRestClient', () => {
   });
 
   it('pings the API successfully', async () => {
-    vi.mocked(mockTransport.request).mockResolvedValue({});
+    vi.mocked(mockTransport.request).mockResolvedValue({ data: {}, status: 200 });
 
     await expect(client.ping()).resolves.toBeUndefined();
   });

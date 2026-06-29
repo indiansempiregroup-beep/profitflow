@@ -1,5 +1,5 @@
 export interface ExchangeConfig {
-  name: string;
+  name?: string;
   baseUrl?: string;
   timeoutMs?: number;
   maxRetries?: number;

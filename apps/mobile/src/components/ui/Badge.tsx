@@ -1,5 +1,5 @@
 import React, { type ReactNode } from 'react';
-import { View, Text, StyleSheet, type ViewStyle, type TextStyle } from 'react-native';
+import { View, Text, StyleSheet, type ViewStyle } from 'react-native';
 import { useTheme } from './ThemeProvider';
 
 interface BadgeProps {
@@ -9,7 +9,10 @@ interface BadgeProps {
   style?: ViewStyle;
 }
 
-const variantStyles = (theme: ReturnType<typeof useTheme>, variant: NonNullable<BadgeProps['variant']>) => {
+const variantStyles = (
+  theme: ReturnType<typeof useTheme>,
+  variant: NonNullable<BadgeProps['variant']>,
+) => {
   switch (variant) {
     case 'success':
       return { backgroundColor: theme.colors.success, color: theme.colors.primaryForeground };

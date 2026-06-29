@@ -1,7 +1,7 @@
 import { create } from 'zustand';
-import * as SecureStore from 'expo-secure-store';
 import { saveToken, clearToken, fetcher } from '../lib/api';
 import { TOKEN_KEY } from '../lib/constants';
+import { getStoredItem } from '../lib/secure-storage';
 
 export interface AuthState {
   isAuthenticated: boolean;
@@ -16,6 +16,34 @@ export interface AuthState {
   initializeAuth: () => Promise<void>;
 }
 
+interface AuthUser {
+  id: string;
+  email: string;
+}
+
+interface AuthSuccessResponse {
+  success: true;
+  token: string;
+  user: AuthUser;
+}
+
+interface AuthErrorResponse {
+  success: false;
+  error?: {
+    message?: string;
+  };
+}
+
+interface MeResponse {
+  success: boolean;
+  user?: AuthUser;
+}
+
+type AuthResponse = AuthSuccessResponse | AuthErrorResponse;
+
+const getErrorMessage = (error: unknown, fallback: string) =>
+  error instanceof Error ? error.message : fallback;
+
 export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: false,
   initialized: false,
@@ -26,43 +54,56 @@ export const useAuthStore = create<AuthState>((set) => ({
   signIn: async (email: string, password: string) => {
     set({ loading: true, error: null });
     try {
-      const res = await fetcher('/auth/login', {
+      const res = await fetcher<AuthResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
-      if (res && (res as any).success && (res as any).token) {
-        const token = (res as any).token as string;
+      if (res.success) {
+        const token = res.token;
         await saveToken(token);
-        set({ isAuthenticated: true, initialized: true, userName: (res as any).user?.email, token, loading: false, error: null });
+        set({
+          isAuthenticated: true,
+          initialized: true,
+          userName: res.user.email,
+          token,
+          loading: false,
+          error: null,
+        });
         return true;
       }
 
-      set({ error: (res as any)?.error?.message ?? 'Invalid response from server', loading: false });
+      set({ error: res.error?.message ?? 'Invalid response from server', loading: false });
       return false;
-    } catch (err: any) {
-      set({ error: err?.message ?? 'Login failed', loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Login failed'), loading: false });
       return false;
     }
   },
   signUp: async (email: string, password: string) => {
     set({ loading: true, error: null });
     try {
-      const res = await fetcher('/auth/register', {
+      const res = await fetcher<AuthResponse>('/auth/register', {
         method: 'POST',
         body: JSON.stringify({ email, password }),
       });
-      if (res && (res as any).success && (res as any).token) {
-        const token = (res as any).token as string;
+      if (res.success) {
+        const token = res.token;
         await saveToken(token);
-        set({ isAuthenticated: true, initialized: true, userName: (res as any).user?.email, token, loading: false, error: null });
+        set({
+          isAuthenticated: true,
+          initialized: true,
+          userName: res.user.email,
+          token,
+          loading: false,
+          error: null,
+        });
         return true;
       }
 
-      set({ error: (res as any)?.error?.message ?? 'Invalid response from server', loading: false });
+      set({ error: res.error?.message ?? 'Invalid response from server', loading: false });
       return false;
-    } catch (err: any) {
-      const message = err?.message ?? 'Registration failed';
-      set({ error: message, loading: false });
+    } catch (error: unknown) {
+      set({ error: getErrorMessage(error, 'Registration failed'), loading: false });
       return false;
     }
   },
@@ -73,21 +114,33 @@ export const useAuthStore = create<AuthState>((set) => ({
   initializeAuth: async () => {
     set({ loading: true });
     try {
-      const token = await SecureStore.getItemAsync(TOKEN_KEY);
+      const token = await getStoredItem(TOKEN_KEY);
       if (!token) {
         set({ initialized: true, loading: false });
         return;
       }
 
-      const me = await fetcher('/auth/me');
-      if (me && (me as any).user) {
-        set({ token, isAuthenticated: true, userName: (me as any).user?.email, initialized: true, loading: false });
+      const me = await fetcher<MeResponse>('/auth/me');
+      if (me.user) {
+        set({
+          token,
+          isAuthenticated: true,
+          userName: me.user.email,
+          initialized: true,
+          loading: false,
+        });
         return;
       }
     } catch {
       await clearToken();
     }
 
-    set({ initialized: true, isAuthenticated: false, userName: undefined, token: undefined, loading: false });
+    set({
+      initialized: true,
+      isAuthenticated: false,
+      userName: undefined,
+      token: undefined,
+      loading: false,
+    });
   },
 }));

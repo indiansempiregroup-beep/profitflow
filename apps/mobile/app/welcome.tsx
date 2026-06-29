@@ -10,11 +10,21 @@ export default function WelcomeScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>ProfitFlow</Text>
-      <Text style={styles.subtitle}>A premium arbitrage intelligence platform for crypto traders.</Text>
+      <Text style={styles.subtitle}>
+        A premium arbitrage intelligence platform for crypto traders.
+      </Text>
       <Card style={styles.card}>
-        <Text style={styles.cardText}>Discover actionable opportunities, connect exchanges, and manage your trading insights in one secure app.</Text>
-        <Button label="Sign in" onPress={() => router.push('/login')} />
-        <Button label="Create account" variant="secondary" onPress={() => router.push('/register')} />
+        <Text style={styles.cardText}>
+          Discover actionable opportunities, connect exchanges, and manage your trading insights in
+          one secure app.
+        </Text>
+        <Button label="Sign in" onPress={() => router.push('/login')} style={styles.button} />
+        <Button
+          label="Create account"
+          variant="secondary"
+          onPress={() => router.push('/register')}
+          style={[styles.button, styles.secondaryButton]}
+        />
       </Card>
     </View>
   );
@@ -40,6 +50,13 @@ const styles = StyleSheet.create({
   },
   card: {
     padding: theme.spacing.xl,
+    gap: theme.spacing.md,
+  },
+  button: {
+    width: '100%',
+  },
+  secondaryButton: {
+    borderColor: theme.colors.primary,
   },
   cardText: {
     color: theme.colors.textSecondary,

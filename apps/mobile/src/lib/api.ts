@@ -1,5 +1,5 @@
 import { API_BASE_URL, API_PREFIX } from './constants';
-import * as SecureStore from 'expo-secure-store';
+import { deleteStoredItem, getStoredItem, setStoredItem } from './secure-storage';
 
 const TOKEN_KEY = 'profitflow_token';
 const DASHBOARD_CACHE_KEY = 'profitflow_dashboard_cache';
@@ -7,7 +7,7 @@ const PROFILE_CACHE_KEY = 'profitflow_profile_cache';
 
 async function saveCache<T>(key: string, data: T): Promise<void> {
   try {
-    await SecureStore.setItemAsync(key, JSON.stringify(data));
+    await setStoredItem(key, JSON.stringify(data));
   } catch {
     // Best effort only; offline fallback should not fail the app.
   }
@@ -15,7 +15,7 @@ async function saveCache<T>(key: string, data: T): Promise<void> {
 
 async function getCache<T>(key: string): Promise<T | null> {
   try {
-    const raw = await SecureStore.getItemAsync(key);
+    const raw = await getStoredItem(key);
     if (!raw) return null;
     return JSON.parse(raw) as T;
   } catch {
@@ -24,7 +24,7 @@ async function getCache<T>(key: string): Promise<T | null> {
 }
 
 export async function fetcher<T>(path: string, init?: RequestInit, cacheKey?: string): Promise<T> {
-  const token = await SecureStore.getItemAsync(TOKEN_KEY);
+  const token = await getStoredItem(TOKEN_KEY);
 
   const headers: Record<string, string> = {
     'Content-Type': 'application/json',
@@ -39,7 +39,22 @@ export async function fetcher<T>(path: string, init?: RequestInit, cacheKey?: st
 
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(`API request failed: ${response.status} ${response.statusText} - ${body}`);
+      let message = `Request failed with status ${response.status}.`;
+
+      try {
+        const parsed = JSON.parse(body) as {
+          error?: { message?: string; details?: Array<{ field?: string; message?: string }> };
+        };
+        const details = parsed.error?.details
+          ?.map((detail) => detail.message)
+          .filter(Boolean)
+          .join(' ');
+        message = details || parsed.error?.message || message;
+      } catch {
+        message = body || message;
+      }
+
+      throw new Error(message);
     }
 
     const data = (await response.json()) as T;
@@ -59,11 +74,11 @@ export async function fetcher<T>(path: string, init?: RequestInit, cacheKey?: st
 }
 
 export async function saveToken(token: string) {
-  await SecureStore.setItemAsync(TOKEN_KEY, token);
+  await setStoredItem(TOKEN_KEY, token);
 }
 
 export async function clearToken() {
-  await SecureStore.deleteItemAsync(TOKEN_KEY);
+  await deleteStoredItem(TOKEN_KEY);
 }
 
 export const CACHE_KEYS = {

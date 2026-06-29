@@ -1,4 +1,11 @@
-import type { Opportunity } from '@profitflow/shared';
+import type {
+  Opportunity,
+  ValidatedOpportunity,
+  FeeAnalysis,
+  LiquidityScore,
+  SlippageEstimate,
+  NetworkFeeEstimate,
+} from '@profitflow/shared';
 import type { InternalEventBus } from '@/exchanges/market-data/event-bus.js';
 import type { StaleDataDetector } from '@/exchanges/market-data/stale-detector.js';
 import type { NormalizedMarketStore } from '@/exchanges/market-data/store.js';
@@ -59,6 +66,17 @@ export class OpportunityEvaluationService {
         slippageEstimate,
       );
 
+      const enrichedFeeAnalysis: FeeAnalysis = {
+        ...feeAnalysis,
+        totalTradingFees: feeAnalysis.buyFee + feeAnalysis.sellFee,
+        networkFee: {
+          asset: 'USD',
+          amount: 0,
+          currency: 'USD',
+        } as NetworkFeeEstimate,
+        totalFees: feeAnalysis.buyFee + feeAnalysis.sellFee,
+      };
+
       if (!this.isOpportunityProfitable(opportunity, feeAnalysis, slippageEstimate)) {
         this.options.eventBus.publish({
           type: 'scanner.opportunity.ranked',
@@ -77,7 +95,7 @@ export class OpportunityEvaluationService {
 
       const validatedOpportunity: ValidatedOpportunity = {
         ...opportunity,
-        feeAnalysis,
+        feeAnalysis: enrichedFeeAnalysis,
         liquidityScore,
         slippageEstimate,
         confidence,
@@ -99,6 +117,15 @@ export class OpportunityEvaluationService {
     }
   }
 
+  getValidatedOpportunities(): ValidatedOpportunity[] {
+    return Array.from(this.validatedOpportunities.values());
+  }
+
+  stop(): void {
+    // Cleanup any resources if needed
+    this.validatedOpportunities.clear();
+  }
+
   private isOpportunityProfitable(
     opportunity: Opportunity,
     feeAnalysis: FeeAnalysis,
@@ -107,31 +134,6 @@ export class OpportunityEvaluationService {
     const netProfit = opportunity.spread - feeAnalysis.totalFees - slippageEstimate.amount;
     return netProfit > 0;
   }
-}
-
-export interface FeeAnalysis {
-  buyFee: number;
-  sellFee: number;
-  totalFees: number;
-}
-
-export interface LiquidityScore {
-  score: number;
-  details: string;
-}
-
-export interface SlippageEstimate {
-  amount: number;
-  percentage: number;
-  details: string;
-}
-
-export interface ValidatedOpportunity extends Opportunity {
-  feeAnalysis: FeeAnalysis;
-  liquidityScore: LiquidityScore;
-  slippageEstimate: SlippageEstimate;
-  confidence: number;
-  validatedAt: string;
 }
 
 export interface FeeAnalyzer {
